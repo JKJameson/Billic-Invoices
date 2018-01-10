@@ -850,20 +850,6 @@ class Invoices {
 			$template_id = $db->q('SELECT `id` FROM `emailtemplates` WHERE `default` = ?', 'Invoice Generated');
 			$template_id = $template_id[0]['id'];
 			$billic->module('EmailTemplates');
-			/*
-			mail('josh@servebyte.com', 'Invoice Test', 'Generated Invoice ID: '.$invoiceid.'<br>'.json_encode(array(
-				'to' => $params['user']['email'],
-				'template_id' => $template_id,
-				'vars' => array(
-					'invoice' => array(
-						'id' => $invoiceid,
-						'duedatetext' => $billic->date_display($params['duedate']),
-					),
-					'services' => $params['service'],
-					'users' => $params['user'],
-				),
-			)));
-			*/
 			$billic->modules['EmailTemplates']->send(array(
 				'to' => $params['user']['email'],
 				'template_id' => $template_id,
@@ -1123,10 +1109,8 @@ class Invoices {
 					}
 				break;
 			}
-			//$billic->email('josh@servebyte.com', 'Billic DEBUG', 'Invoices: CHKPOINT: Before method_exists');
 			$billic->module($service['module']);
 			if (method_exists($billic->modules[$service['module']], 'invoices_hook_paid')) {
-				//$billic->email('josh@servebyte.com', 'Billic DEBUG', 'Invoices: CHKPOINT: Inside method_exists');
 				// invoices_hook_paid
 				$array = array(
 					'invoice' => $invoice,
@@ -1135,7 +1119,6 @@ class Invoices {
 				$return = $billic->module_call_functions('invoices_hook_paid', array(
 					$array
 				));
-				//$billic->email('josh@servebyte.com', 'Billic DEBUG', 'Invoices: CHKPOINT: returned: '.json_encode($return));
 				if ($return !== true) {
 					// send an email as a notification to the admin
 					$billic->email(get_config('billic_companyemail') , 'RemoteBillicService: Failed to auto renew service', 'Billic failed to pay the invoice at the remote Billic! You may need to pay the invoice manually.<br>Local Service ID: ' . $array['service']['id'] . '<br>Error Message: ' . $return);
