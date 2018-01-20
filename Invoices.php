@@ -626,7 +626,10 @@ class Invoices {
 		if ($area == 'admin' && $editable && $billic->user_has_permission($billic->user, 'Invoices_Update')) {
 			echo '<div class="input-group"><span class="input-group-addon">Tax @ </span><input type="text" class="form-control" name="taxrate" style="width: 70px" value="' . number_format($invoice['taxrate'], 2) . '"><span class="input-group-addon">%</span></div>';
 		} else {
-			echo 'Tax @ ' . number_format($invoice['taxrate'], 2) . '%';
+			$taxrate = 0;
+			if ($invoice['taxrate']>0)
+				$taxrate = $invoice['taxrate'];
+			echo 'Tax @ ' . number_format($taxrate, 2) . '%';
 		}
 		echo '</td><td>' . get_config('billic_currency_prefix') . $invoice['tax'] . get_config('billic_currency_suffix') . '</td></tr>';
 		$total = $subtotal + $invoice['tax'];
