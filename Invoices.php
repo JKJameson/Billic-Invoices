@@ -737,7 +737,7 @@ class Invoices {
 				$db->q('UPDATE `services` SET `coupon_data` = ? WHERE `id` = ?', json_encode($coupon_data) , $params['service']['id']);
 			}
 			// Invoice item
-			$item_type = $params['service']['type'];
+			$item_type = '';
 			$item_relid = $params['service']['id'];
 			$item_description = 'Service #' . $params['service']['id'] . ' ';
 			if (!empty($params['service']['domain'])) {
@@ -794,13 +794,17 @@ class Invoices {
 		if ($tax_percent === NULL) {
 			$db->q('UPDATE `invoices` SET `taxrate` = NULL WHERE `id` = ?', $invoiceid);
 		}
+		$prorata_time = 0;
+		if ($params['prorata_time']>0) {
+			$prorata_time = $params['prorata_time'];
+		}
 		$db->insert('invoiceitems', array(
 			'invoiceid' => $invoiceid,
 			'type' => $item_type,
 			'relid' => $item_relid,
 			'description' => $item_description,
 			'amount' => $main_amount,
-			'prorata_time' => $params['prorata_time'],
+			'prorata_time' => $prorata_time,
 		));
 		if ($setup_amount > 0) {
 			$db->insert('invoiceitems', array(
