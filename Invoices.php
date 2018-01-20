@@ -225,7 +225,6 @@ class Invoices {
 		$total = $total[0]['COUNT(*)'];
 		$pagination = $billic->pagination(array(
 			'total' => $total,
-			'list_manager' => $billic->module['ListManager'],
 		));
 		echo $pagination['menu'];
 		$func_array_select2[0] = 'SELECT * FROM ' . $func_array_select2[0] . ' ORDER BY `date` DESC LIMIT ' . $pagination['start'] . ',' . $pagination['limit'];
