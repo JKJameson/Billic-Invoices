@@ -164,9 +164,6 @@ class Invoices {
 			}
 			$billic->status = 'updated';
 		}
-		if (isset($_GET['POST'])) {
-			$_POST = json_decode(base64_decode($_GET['POST']) , true);
-		}
 		$billic->module('ListManager');
 		$billic->modules['ListManager']->configure(array(
 			'search' => array(
