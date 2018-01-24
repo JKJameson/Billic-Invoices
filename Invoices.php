@@ -305,7 +305,7 @@ class Invoices {
 				err("Invoice " . $_GET['ID'] . " does not exist");
 			}
 			// is this an "Add Credit" invoice?
-			$numitems_addcredit = $db->q('SELECT COUNT(*) FROM `invoiceitems` WHERE `invoiceid` = ? AND `description` = \'Add Credit\'', $params['invoice']['id']);
+			$numitems_addcredit = $db->q('SELECT COUNT(*) FROM `invoiceitems` WHERE `invoiceid` = ? AND `description` = \'Add Credit\'', $invoice['id']);
 			$numitems_addcredit = $numitems_addcredit[0]['COUNT(*)'];
 			if (array_key_exists('Action', $_GET) && $_GET['Action'] == 'PDF') {
 				$this->generate_pdf($invoice);
@@ -374,6 +374,7 @@ class Invoices {
 						$modules_done[] = $module['id'];
 						$billic->module($module['id']);
 						if (method_exists($billic->modules[$module['id']], 'payment_page')) {
+							$show = false;
 							if (method_exists($billic->modules[$module['id']], 'payment_button')) {
 								$show = call_user_func(array(
 									$billic->modules[$module['id']],
@@ -382,7 +383,7 @@ class Invoices {
 							}
 							if ($show === 'verify') {
 								echo $verification_text;
-							}
+							} else
 							if ($show !== false) {
 								if (empty($show)) {
 									$show = 'Pay Now';
