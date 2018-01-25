@@ -867,43 +867,45 @@ class Invoices {
 				) ,
 			));
 		}
-		$invoice = $db->q('SELECT * FROM `invoices` WHERE `id` = ?', $invoiceid);
-		$invoice = $invoice[0];
-		// Calculate amount to charge
-		$params_calc_charge = array(
-			'invoice' => $invoice,
-			'user' => $params['user'],
-		);
-		$charge = $this->calc_charge($params_calc_charge);
-		$params_payment_charge = array(
-			'invoice' => $invoice,
-			'user' => $params['user'],
-			'charge' => $charge,
-		);
-		// Process payment charge
-		$modules = $billic->module_list_function('payment_charge');
-		foreach ($modules as $module) {
-			$billic->module($module['id']);
-			if (method_exists($billic->modules[$module['id']], 'payment_charge')) {
-				$payment_charge = call_user_func(array(
-					$billic->modules[$module['id']],
-					'payment_charge'
-				) , $params_payment_charge);
-				if ($payment_charge != 'PASS' && $payment_charge !== true) {
-					err('Failed to charge using module ' . $module['id'] . ': ' . $payment_charge);
+		if ($item_description != 'Add Credit') {
+			$invoice = $db->q('SELECT * FROM `invoices` WHERE `id` = ?', $invoiceid);
+			$invoice = $invoice[0];
+			// Calculate amount to charge
+			$params_calc_charge = array(
+				'invoice' => $invoice,
+				'user' => $params['user'],
+			);
+			$charge = $this->calc_charge($params_calc_charge);
+			$params_payment_charge = array(
+				'invoice' => $invoice,
+				'user' => $params['user'],
+				'charge' => $charge,
+			);
+			// Process payment charge
+			$modules = $billic->module_list_function('payment_charge');
+			foreach ($modules as $module) {
+				$billic->module($module['id']);
+				if (method_exists($billic->modules[$module['id']], 'payment_charge')) {
+					$payment_charge = call_user_func(array(
+						$billic->modules[$module['id']],
+						'payment_charge'
+					) , $params_payment_charge);
+					if ($payment_charge != 'PASS' && $payment_charge !== true) {
+						err('Failed to charge using module ' . $module['id'] . ': ' . $payment_charge);
+					}
 				}
 			}
-		}
-		if ($params['user']['auto_renew'] == 1 && $params['user']['credit'] >= $amount) {
-			$error = $this->addpayment(array(
-				'gateway' => 'credit',
-				'invoiceid' => $invoiceid,
-				'amount' => $amount,
-				'currency' => get_config('billic_currency_code') ,
-				'transactionid' => 'credit',
-			));
-			if ($error !== true) {
-				err('Failed to apply payment to invoice: ' . $error);
+			if ($params['user']['auto_renew'] == 1 && $params['user']['credit'] >= $amount) {
+				$error = $this->addpayment(array(
+					'gateway' => 'credit',
+					'invoiceid' => $invoiceid,
+					'amount' => $amount,
+					'currency' => get_config('billic_currency_code') ,
+					'transactionid' => 'credit',
+				));
+				if ($error !== true) {
+					err('Failed to apply payment to invoice: ' . $error);
+				}
 			}
 		}
 		return $invoiceid;
