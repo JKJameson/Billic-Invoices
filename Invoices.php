@@ -157,12 +157,14 @@ class Invoices {
 				$db->q('UPDATE `invoices` SET `status` = \'Cancelled\' WHERE `status` = \'Unpaid\' AND `id` = ?', $id);
 			}
 			$billic->status = 'updated';
+			$_POST = json_decode(base64_decode($_POST['search_post']) , true);
 		}
 		if (isset($_POST['mark_unpaid']) && $billic->user_has_permission($billic->user, 'Invoices_Change_Status')) {
 			foreach ($_POST['ids'] as $id => $v) {
 				$db->q('UPDATE `invoices` SET `status` = \'Unpaid\' WHERE `status` = \'Cancelled\' AND `id` = ?', $id);
 			}
 			$billic->status = 'updated';
+			$_POST = json_decode(base64_decode($_POST['search_post']) , true);
 		}
 		$billic->module('ListManager');
 		$billic->modules['ListManager']->configure(array(
@@ -248,7 +250,7 @@ class Invoices {
 		echo '<div style="float: right;padding-right: 40px;">Showing ' . $pagination['start_text'] . ' to ' . $pagination['end_text'] . ' of ' . $total . ' Invoices</div>';
 		echo $billic->modules['ListManager']->search_link();
 		if ($billic->user_has_permission($billic->user, 'Invoices_Change_Status')) {
-			echo '<form method="POST">With Selected: <button type="submit" class="btn btn-xs btn-danger" name="mark_cancelled" onclick="return confirm(\'Are you sure you want to mark the selected invoices as Cancelled?\');"><i class="icon-remove"></i> Mark as Cancelled</button> <button type="submit" class="btn btn-xs btn-warning" name="mark_unpaid" onclick="return confirm(\'Are you sure you want to mark the selected invoices as Unpaid?\');"><i class="icon-undo"></i> Mark as Unpaid</button><br>';
+			echo '<form method="POST">With Selected: <input type="hidden" name="search_post" value="' . base64_encode(json_encode($_POST)) . '"><button type="submit" class="btn btn-xs btn-danger" name="mark_cancelled" onclick="return confirm(\'Are you sure you want to mark the selected invoices as Cancelled?\');"><i class="icon-remove"></i> Mark as Cancelled</button> <button type="submit" class="btn btn-xs btn-warning" name="mark_unpaid" onclick="return confirm(\'Are you sure you want to mark the selected invoices as Unpaid?\');"><i class="icon-undo"></i> Mark as Unpaid</button><br>';
 		}
 		echo '<table class="table table-striped"><tr><th><input type="checkbox" onclick="checkAll(this, \'ids\')"></th><th>Invoice&nbsp;#</th><th>Date</th><th>Due Date</th><th>Subtotal</th><th>Credit</th><th>Tax</th><th>Total</th><th>Status</th></tr>';
 		if (empty($invoices)) {
