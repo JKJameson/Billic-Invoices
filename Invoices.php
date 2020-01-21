@@ -365,7 +365,7 @@ class Invoices {
 				} else {
 					echo '<div class="table-responsive">';
 					echo '<table class="table table-striped table-hover">';
-					echo '<tr><th style="width:200px">Payment Method</th><th style="width:250px">Availability</th><th>Features</th></tr>';
+					echo '<tr><th style="width:200px">Payment Method</th><th style="width:350px">Availability</th><th>Features</th></tr>';
 					$modules = array_merge($billic->module_list_function('payment_button') , $billic->module_list_function('payment_page'));
 					$modules_done = array();
 					foreach ($modules as $module) {
