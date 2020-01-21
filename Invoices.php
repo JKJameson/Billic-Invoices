@@ -515,6 +515,21 @@ class Invoices {
 	}
 	function show($invoice, $user_row, $area, $editable) { // $area = admin OR client
 		global $billic, $db;
+		if ($invoice['status'] == 'Unpaid') {
+			if ($_GET['Status'] == 'Completed') {
+				$sessKey = 'invoice_'.$invoice['id'].'_complete';
+				if (empty($_SESSION[$sessKey]))
+					$_SESSION[$sessKey] = time();
+				if ($_SESSION[$sessKey]>(time()-300)) {
+					echo '<p>Please wait, we are processing your payment. Checking again in <span id="paymentRefreshCountdown">10</span> seconds.</p><script>var paymentRefreshCountdown = 10;setInterval(function() { paymentRefreshCountdown--; if (paymentRefreshCountdown===0) { location.reload(); } else if (paymentRefreshCountdown>0) { $(\'#paymentRefreshCountdown\').text(paymentRefreshCountdown); } }, 1000);</script>';
+					return;
+				} else {
+					echo '<p>Something went wrong! Please check your payment.</p>';
+					unset($_SESSION[$sessKey]);
+					return;
+				}
+			}
+		}
 		echo '<div class="row"><div class="col-sm-4" style="padding: 20px"><b>Invoice #' . $invoice['id'] . '</b><br><div style="padding-left: 10px">Date: ' . $billic->date_display($invoice['date']) . '<br>Due: ' . $billic->date_display($invoice['duedate']) . '<br>Status: ';
 		switch ($invoice['status']) {
 			case 'Paid':
@@ -534,22 +549,13 @@ class Invoices {
 		echo '</div></div><div class="col-sm-4" style="padding: 20px"><b>To pay ' . get_config('billic_companyname') . ':</b><br><div style="padding-left: 10px">' . nl2br(get_config('billic_companyaddress'));
 		echo '</div></div></div><br>';
 		if ($area == 'client') {
-			echo '<div class="row" align="center"><a class="btn btn-default" href="/User/Invoices/ID/' . $invoice['id'] . '/Action/PDF/"><i class="icon-document"></i> Generate PDF</a>';
+			echo '<div class="row" align="center">';
 			if ($invoice['status'] == 'Unpaid') {
-				if ($_GET['Status'] == 'Complete') {
-					echo '<h1 style="color:darkgreen">Thank you for the payment! It will be applied within the next few minutes.</h1>';
-				} else {
-					if ($invoice['status'] == 'Unpaid') {
-						echo ' <a class="btn btn-success" href="/User/Invoices/ID/' . $invoice['id'] . '/Action/Pay/"><i class="icon-credit-card"></i> Pay Invoice</a>';
-					}
-				}
-			} else {
-				if ($_GET['Status'] == 'Complete') {
-					echo '<h1 style="color:darkgreen">Thank you for the payment!</h1>';
-				}
+				echo '<a class="btn btn-success" href="/User/Invoices/ID/' . $invoice['id'] . '/Action/Pay/"><i class="icon-credit-card"></i> Pay Invoice</a>';
 			}
-			echo '</div><br><br>';
+			echo '&nbsp;<a class="btn btn-default" href="/User/Invoices/ID/' . $invoice['id'] . '/Action/PDF/"><i class="icon-document"></i> Generate PDF</a></div><br><br>';
 		}
+			
 		if ($area == 'admin' && $editable && $billic->user_has_permission($billic->user, 'Invoices_Update')) {
 			$_POST['add_order'] = $db->q('SELECT COUNT(*) FROM `invoiceitems` WHERE `invoiceid` = ?', $_GET['ID']);
 			$_POST['add_order'] = $_POST['add_order'][0]['COUNT(*)'] * 5;
