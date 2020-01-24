@@ -1283,6 +1283,7 @@ class Invoices {
 		}
 		echo '</table>';
 	}
+	var $currentY;
 	function generate_pdf($invoice) {
 		global $billic, $db;
 		set_include_path(get_include_path() . PATH_SEPARATOR . 'Modules/Core/fpdf');
@@ -1297,20 +1298,91 @@ class Invoices {
 		if (empty($company_address)) {
 			$company_address = ' ';
 		}
-		$pdf->addSociete($company_name, $company_address);
-		$pdf->invoice_title("Invoice #" . $invoice['id'], date('jS F Y', $invoice['date']));
-		$pdf->temporaire($invoice['status']);
-		$pdf->SetFont("Helvetica", "", 10);
+		$this->currentY = 10;
+		$this->watermarkPosX = 120;
+		$this->watermarkPosY = 220;
+		$this->watermarkRotate = 30;
+		
+		$logo = 'i/invoice_logo.png';
+		if (file_exists($logo)) {
+			$pdf->SetXY(10, $this->currentY);
+			$size = getimagesize($logo);
+			if($size!==false) {
+				$wImg = $size[0];
+				$hImg = $size[1];
+				$pdf->Image($logo);
+				$this->currentY += ($hImg/$pdf->k);
+				$this->watermarkRotate = 0;
+				$this->watermarkPosX = 10 + ($wImg/$pdf->k) + ($pdf->w / 2);
+				$this->watermarkPosY = 10 + ($hImg/$pdf->k/2);
+			}
+		}
+		
+		// Invoice Number
+		$text = "Invoice #" . $invoice['id'];
+		$pdf->SetFont("Helvetica", "B", 16);
+		$pdf->SetXY(10, $this->currentY);
+		$pdf->Cell($pdf->GetStringWidth($text), 5, $text);
+		
+		// Invoice Date
+		$text = date('jS F Y', $invoice['date']);
+		$pdf->SetFont("Helvetica", "", 12);
+		$pdf->SetXY(10, $this->currentY+5);
+		$pdf->Cell($pdf->GetStringWidth($text), 5, $text);
+		
+		// Company Details
+		$pdf->SetFont('Helvetica', 'B', 12);
+		$length_name = $pdf->GetStringWidth($company_name);
+		$pdf->SetFont('Helvetica', '', 12);
+		$length_address = $pdf->GetStringWidth($company_address);
+		$height_company_address = $pdf->GetStringHeight($company_name, 5);
+		$max_length = ($length_name>$length_address?$length_name:$length_address);
+
+		$x1 = 68 - $max_length;
+		$y1 = $this->currentY;
+
+		$pdf->SetFont('Helvetica', 'B', 12);
+		$pdf->SetXY($x1, $y1);
+		$pdf->Cell($length_name, 2, $company_name);
+		$pdf->SetXY($x1, $y1 + 4);
+		$pdf->SetFont('Helvetica', '', 12);
+		$pdf->MultiCell($length_address, 5, $company_address);
+		
+		// Watermark
+		$text = $invoice['status'];
+		$fontsize = 50;
+		$pdf->SetFont('Helvetica', 'B', $fontsize);
+		$pdf->SetTextColor(203, 203, 203);
+		if ($this->watermarkRotate>0)
+			$pdf->Rotate($this->watermarkRotate, 55, 190);
+		$this->watermarkPosX -= ($pdf->GetStringWidth($text)*2);
+		//$this->watermarkPosY += $fontsize;
+		$pdf->Text($this->watermarkPosX, $this->watermarkPosY, $text);
+		$pdf->Rotate(0);
+		$pdf->SetTextColor(0, 0, 0);
+		
+		$pdf->SetFont("Helvetica", "", 12);
 		$amount_title = 'Amount (' . get_config('billic_currency_code') . ')';
-		$pdf->addClientAdresse($this->user_address($billic->user));
-		//$pdf->addDueDate(date('jS F Y', $invoice['duedate']));
+		
+		// Client address
+		$text = 'Invoiced To:' . PHP_EOL . $this->user_address($billic->user);
+		$r1 = $pdf->w - 70;
+		$r2 = $r1 + 68;
+		$y1 = $this->currentY;
+		$pdf->SetXY($r1, $y1);
+		$pdf->MultiCell(60, 5, $text);
+		$height_client_address = $pdf->GetStringHeight($text, 5);
+		
+		$max_height = ($height_company_address>$height_client_address?$height_company_address:$height_client_address);
+		$this->currentY += $max_height;
+		
 		$cols = array(
 			"Service ID" => 23,
 			"Description" => 117,
 			$amount_title => 30,
 			"Tax Rate" => 20
 		);
-		$pdf->addCols($cols);
+		$pdf->addCols($cols, $this->currentY);
 		$cols = array(
 			"Service ID" => "L",
 			"Description" => "L",
@@ -1318,13 +1390,15 @@ class Invoices {
 			"Tax Rate" => "C"
 		);
 		$pdf->addLineFormat($cols);
+		$this->currentY += 10;
 		$tax_groups = array();
 		$subtotal = 0;
 		$total = 0;
 		//$currency = get_config('billic_currency_prefix').'%01.2f'.get_config('billic_currency_suffix');
 		//$currency = preg_replace_callback("/(&[0-9a-z]+;)/", function($m) { return mb_convert_encoding($m[1], 'Windows-1252', "HTML-ENTITIES"); }, $currency);
 		//$currency = str_replace(chr(226), chr(128), $currency); // Fix Euro Sign
-		$y = 75;
+		
+		$y = $this->currentY;
 		$invoiceitems = $db->q('SELECT `relid`, `description`, `amount` FROM `invoiceitems` WHERE `invoiceid` = ?', $invoice['id']);
 		foreach ($invoiceitems as $invoiceitem) {
 			$line = array();
@@ -1332,13 +1406,14 @@ class Invoices {
 			if ($line['Service ID'] == 0) {
 				$line['Service ID'] = 'N/A';
 			}
-			$line['Description'] = $invoiceitem['description'];
+			$line['Description'] = implode("\n (", explode(' (', $invoiceitem['description']));
 			$line[$amount_title] = $invoiceitem['amount'];
 			$subtotal+= $invoiceitem['amount'];
 			// TODO: Change tax to column in invoiceitems
 			$invoiceitem['taxgroup'] = $invoice['taxrate'];
 			if ($invoiceitem['taxgroup'] === NULL) {
 				$line['Tax Rate'] = 'N/A';
+				$total+= $invoiceitem['amount'];
 			} else {
 				$tax = round(($invoiceitem['amount'] / 100) * $invoiceitem['taxgroup'], 2);
 				if (!array_key_exists($invoiceitem['taxgroup'], $tax_groups)) {
@@ -1392,8 +1467,8 @@ class Invoices {
 		}
 		$line = array();
 		$line['Service ID'] = ' ';
-		$line['Description'] = str_repeat(' ', 105) . 'Total:';
-		$line[$amount_title] = $total;
+		$line['Description'] = str_repeat(' ', 85) . 'Total:';
+		$line[$amount_title] = number_format($total, 2);
 		$line['Tax Rate'] = ' ';
 		$size = $pdf->addLine($y, $line);
 		$y+= $size + 2;
@@ -1413,37 +1488,6 @@ if (!class_exists('Invoices_PDF_Invoice')) {
 		var $colonnes;
 		var $format;
 		var $angle = 0;
-		// private functions
-		function RoundedRect($x, $y, $w, $h, $r, $style = '') {
-			$k = $this->k;
-			$hp = $this->h;
-			if ($style == 'F') $op = 'f';
-			elseif ($style == 'FD' || $style == 'DF') $op = 'B';
-			else $op = 'S';
-			$MyArc = 4 / 3 * (sqrt(2) - 1);
-			$this->_out(sprintf('%.2F %.2F m', ($x + $r) * $k, ($hp - $y) * $k));
-			$xc = $x + $w - $r;
-			$yc = $y + $r;
-			$this->_out(sprintf('%.2F %.2F l', $xc * $k, ($hp - $y) * $k));
-			$this->_Arc($xc + $r * $MyArc, $yc - $r, $xc + $r, $yc - $r * $MyArc, $xc + $r, $yc);
-			$xc = $x + $w - $r;
-			$yc = $y + $h - $r;
-			$this->_out(sprintf('%.2F %.2F l', ($x + $w) * $k, ($hp - $yc) * $k));
-			$this->_Arc($xc + $r, $yc + $r * $MyArc, $xc + $r * $MyArc, $yc + $r, $xc, $yc + $r);
-			$xc = $x + $r;
-			$yc = $y + $h - $r;
-			$this->_out(sprintf('%.2F %.2F l', $xc * $k, ($hp - ($y + $h)) * $k));
-			$this->_Arc($xc - $r * $MyArc, $yc + $r, $xc - $r, $yc + $r * $MyArc, $xc - $r, $yc);
-			$xc = $x + $r;
-			$yc = $y + $r;
-			$this->_out(sprintf('%.2F %.2F l', ($x) * $k, ($hp - $yc) * $k));
-			$this->_Arc($xc - $r, $yc - $r * $MyArc, $xc - $r * $MyArc, $yc - $r, $xc, $yc - $r);
-			$this->_out($op);
-		}
-		function _Arc($x1, $y1, $x2, $y2, $x3, $y3) {
-			$h = $this->h;
-			$this->_out(sprintf('%.2F %.2F %.2F %.2F %.2F %.2F c ', $x1 * $this->k, ($h - $y1) * $this->k, $x2 * $this->k, ($h - $y2) * $this->k, $x3 * $this->k, ($h - $y3) * $this->k));
-		}
 		function Rotate($angle, $x = - 1, $y = - 1) {
 			if ($x == - 1) $x = $this->x;
 			if ($y == - 1) $y = $this->y;
@@ -1457,13 +1501,6 @@ if (!class_exists('Invoices_PDF_Invoice')) {
 				$cy = ($this->h - $y) * $this->k;
 				$this->_out(sprintf('q %.5F %.5F %.5F %.5F %.2F %.2F cm 1 0 0 1 %.2F %.2F cm', $c, $s, -$s, $c, $cx, $cy, -$cx, -$cy));
 			}
-		}
-		function _endpage() {
-			if ($this->angle != 0) {
-				$this->angle = 0;
-				$this->_out('Q');
-			}
-			parent::_endpage();
 		}
 		// public functions
 		function sizeOfText($texte, $largeur) {
@@ -1485,57 +1522,16 @@ if (!class_exists('Invoices_PDF_Invoice')) {
 			}
 			return $nb_lines;
 		}
-		// Company
-		function addSociete($nom, $adresse) {
-			$x1 = 10;
-			$y1 = 8;
-			//Positionnement en bas
-			$this->SetXY($x1, $y1);
-			$this->SetFont('Helvetica', 'B', 12);
-			$length = $this->GetStringWidth($nom);
-			$this->Cell($length, 2, $nom);
-			$this->SetXY($x1, $y1 + 4);
-			$this->SetFont('Helvetica', '', 10);
-			$length = $this->GetStringWidth($adresse);
-			//Coordonnées de la société
-			$lignes = $this->sizeOfText($adresse, $length);
-			$this->MultiCell($length, 4, $adresse);
+		public function GetStringHeight($txt, $lineHeight = 5) {
+			$lines = substr_count($txt, "\n");
+			$height = ($lines * $this->FontSize * ($lineHeight/3.25));
+			return $height;
 		}
-		function invoice_title($texte, $date) {
-			$w = 50;
-			$r1 = round(($this->w / 2) - $w / 2);
-			$r2 = $r1 + $w;
-			$y1 = 12;
-			$y2 = $y1 + 2;
-			$mid = ($r1 + $r2) / 2;
-			$texte.= PHP_EOL . $date;
-			$szfont = 24;
-			$loop = 0;
-			while ($loop == 0) {
-				$this->SetFont("Helvetica", "B", $szfont);
-				$sz = $this->GetStringWidth($texte);
-				if (($r1 + $sz) > $r2) $szfont--;
-				else $loop++;
-			}
-			$this->SetLineWidth(0.1);
-			$this->SetFillColor(192);
-			$this->RoundedRect($r1, $y1, ($r2 - $r1) , $y2, 2.5, 'DF');
-			$this->SetXY($r1 + 1, $y1 + 2);
-			$this->MultiCell($r2 - $r1 - 1, 5, $texte, 0, "C");
-		}
-		function addClientAdresse($adresse) {
-			$adresse = 'Invoiced To:' . PHP_EOL . $adresse;
-			$r1 = $this->w - 70;
-			$r2 = $r1 + 68;
-			$y1 = 20;
-			$this->SetXY($r1, $y1);
-			$this->MultiCell(60, 4, $adresse);
-		}
-		function addCols($tab) {
+		function addCols($tab, &$currentY) {
 			global $colonnes;
 			$r1 = 10;
 			$r2 = $this->w - ($r1 * 2);
-			$y1 = 66;
+			$y1 = $currentY;
 			$y2 = $this->h - 10 - $y1;
 			$this->SetXY($r1, $y1);
 			$this->Rect($r1, $y1, $r2, $y2, "D");
@@ -1584,16 +1580,6 @@ if (!class_exists('Invoices_PDF_Invoice')) {
 				$ordonnee+= $pos;
 			}
 			return ($maxSize - $ligne);
-		}
-		// add a watermark (temporary estimate, DUPLICATA...)
-		// call this method first
-		function temporaire($texte) {
-			$this->SetFont('Helvetica', 'B', 50);
-			$this->SetTextColor(203, 203, 203);
-			$this->Rotate(45, 55, 190);
-			$this->Text(55, 190, $texte);
-			$this->Rotate(0);
-			$this->SetTextColor(0, 0, 0);
 		}
 	}
 }
