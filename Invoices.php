@@ -1436,7 +1436,7 @@ class Invoices {
 		if (!empty($tax_groups)) {
 			$line = array();
 			$line['Service ID'] = ' ';
-			$line['Description'] = str_repeat(' ', 100) . 'Subtotal:';
+			$line['Description'] = str_repeat(' ', 80) . 'Subtotal:';
 			$line[$amount_title] = $subtotal;
 			$line['Tax Rate'] = ' ';
 			$size = $pdf->addLine($y, $line);
@@ -1451,7 +1451,7 @@ class Invoices {
 			foreach ($tax_groups as $rate => $value) {
 				$line = array();
 				$line['Service ID'] = ' ';
-				$line['Description'] = str_repeat(' ', 107) . 'Tax:';
+				$line['Description'] = str_repeat(' ', 87) . 'Tax:';
 				$line[$amount_title] = $value;
 				$line['Tax Rate'] = round($rate, 2) . '%';
 				$size = $pdf->addLine($y, $line);
