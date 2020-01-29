@@ -365,14 +365,14 @@ class Invoices {
 				} else {
 					echo '<div class="table-responsive">';
 					echo '<table class="table table-striped table-hover">';
-					echo '<tr><th style="width:200px">Payment Method</th><th style="width:350px">Availability</th><th>Features</th></tr>';
+					echo '<tr><th style="min-width:200px">Payment Method</th><th>Features</th></tr>';
 					$modules = array_merge($billic->module_list_function('payment_button') , $billic->module_list_function('payment_page'));
 					$modules_done = array();
 					foreach ($modules as $module) {
 						if (in_array($module['id'], $modules_done)) {
 							continue;
 						}
-						echo '<tr><td>' . $module['id'] . '</td><td>';
+						echo '<tr><td>';
 						$modules_done[] = $module['id'];
 						$billic->module($module['id']);
 						if (method_exists($billic->modules[$module['id']], 'payment_page')) {
