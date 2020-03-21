@@ -510,7 +510,10 @@ class Invoices {
 		if ($html && $billic->user_has_permission($billic->user, 'Users')) {
 			$r.= '</a>';
 		}
-		$r.= (empty($user_row['companyname']) ? '' : ' (' . $user_row['companyname'] . ')') . $eol . (empty($user_row['address1']) ? '' : $user_row['address1'] . $eol) . (empty($user_row['address2']) ? '' : $user_row['address2'] . $eol) . (empty($user_row['city']) ? '' : $user_row['city'] . $eol) . (empty($user_row['state']) ? '' : $user_row['state'] . $eol) . (empty($user_row['postcode']) ? '' : $user_row['postcode'] . $eol) . (empty($user_row['country']) ? '' : $billic->countries[$user_row['country']] . $eol) . (empty($user_row['phonenumber']) ? '' : 'Phone: ' . $user_row['phonenumber'] . $eol) . (empty($user_row['email']) ? '' : 'Email: ' . $user_row['email']);
+		$r.= (empty($user_row['companyname']) ? '' : ' (' . $user_row['companyname'] . ')') . $eol . (empty($user_row['address1']) ? '' : $user_row['address1'] . $eol) . (empty($user_row['address2']) ? '' : $user_row['address2'] . $eol) . (empty($user_row['city']) ? '' : $user_row['city'] . $eol) . (empty($user_row['state']) ? '' : $user_row['state'] . $eol) . (empty($user_row['postcode']) ? '' : $user_row['postcode'] . $eol) . (empty($user_row['country']) ? '' : $billic->countries[$user_row['country']] . $eol);
+		if (!empty($user_row['vatnumber']))
+			$r.= "{$eol}Tax ID: {$user_row['vatnumber']}";
+		// (empty($user_row['phonenumber']) ? '' : 'Phone: ' . $user_row['phonenumber'] . $eol) . (empty($user_row['email']) ? '' : 'Email: ' . $user_row['email'])
 		return $r;
 	}
 	function show($invoice, $user_row, $area, $editable) { // $area = admin OR client
@@ -686,7 +689,7 @@ class Invoices {
 			$item_relid = 0;
 			$item_description = 'Add Credit';
 		} else {
-			if ($params['service']['amount'] == 0) {
+			if (round($params['service']['amount'], 2) === 0.00) {
 				return 0;
 			}
 			$main_amount = $params['service']['amount'];
@@ -1374,7 +1377,7 @@ class Invoices {
 		$height_client_address = $pdf->GetStringHeight($text, 5);
 		
 		$max_height = ($height_company_address>$height_client_address?$height_company_address:$height_client_address);
-		$this->currentY += $max_height;
+		$this->currentY += $max_height + 20;
 		
 		$cols = array(
 			"Service ID" => 23,
