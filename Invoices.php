@@ -17,6 +17,18 @@ class Invoices {
 		'user_menu_name' => 'My Invoices',
 		'user_menu_icon' => '<i class="icon-tags"></i>',
 	);
+	function name($invoice) {
+		$name = "Invoice #{$invoice['id']}";
+		if (empty($invoice['num']))
+			return "Proforma $name";
+		return "Invoice $name";
+	}
+	function name_short($invoice) {
+		$name = "#{$invoice['id']}";
+		if (empty($invoice['num']))
+			return "Proforma $name";
+		return "$name";
+	}
 	function admin_area() {
 		global $billic, $db;
 		if (isset($_GET['ID'])) {
@@ -76,8 +88,8 @@ class Invoices {
 				$invoice = $billic->modules['Invoices']->recalc($invoice);
 				$billic->status = 'updated';
 			}
-			$billic->set_title('Admin/Invoice #' . $_GET['ID']);
-			echo '<img src="' . $billic->avatar($user_row['email'], 100) . '" class="pull-left" style="margin: 5px 5px 5px 0"><h3><a href="/Admin/Users/ID/' . $user_row['id'] . '/">' . $user_row['firstname'] . ' ' . $user_row['lastname'] . '' . (empty($user_row['companyname']) ? '' : ' - ' . $user_row['companyname']) . '</a> &raquo; Invoice #' . $invoice['id'] . '</h3><div class="btn-group" role="group" aria-label="Invoice Actions">';
+			$billic->set_title('Admin/'.$this->name($invoice));
+			echo '<img src="' . $billic->avatar($user_row['email'], 100) . '" class="pull-left" style="margin: 5px 5px 5px 0"><h3><a href="/Admin/Users/ID/' . $user_row['id'] . '/">' . $user_row['firstname'] . ' ' . $user_row['lastname'] . '' . (empty($user_row['companyname']) ? '' : ' - ' . $user_row['companyname']) . '</a> &raquo; ' . $this->name($invoice) . '</h3><div class="btn-group" role="group" aria-label="Invoice Actions">';
 			if ($editable && $billic->user_has_permission($billic->user, 'Invoices_Add_Payment')) {
 				echo '<a href="/Admin/Invoices/ID/' . $invoice['id'] . '/Do/AddPayment/" class="btn btn-success"><i class="icon-money-banknote"></i> Add a Payment</a>';
 			}
@@ -144,7 +156,7 @@ class Invoices {
 				echo '<tr><td>Amount:</td><td><div class="input-group" style="width: 200px"><span class="input-group-addon">' . get_config('billic_currency_prefix') . '</span><input type="text" class="form-control" name="amount" value="' . safe($_POST['amount']) . '"><span class="input-group-addon">' . get_config('billic_currency_suffix') . '</span></div></td></tr>';
 				echo '<tr><td>Transaction&nbsp;ID:</td><td><input type="text" class="form-control" name="transid" value="' . safe($_POST['transid']) . '"></td></tr>';
 				echo '<tr><td colspan="2" align="center"><input type="submit" class="btn btn-default" name="addpayment" value="Add Payment &raquo;"></td></tr>';
-				echo '</table></form><table class="table table-striped" style="width:45%; float:right"><tr><th colspan="2">Invoice #' . $invoice['id'] . '</th></tr><tr><td>Subtotal:</td><td>' . get_config('billic_currency_prefix') . $invoice['subtotal'] . get_config('billic_currency_suffix') . '</td></tr><tr><td>Tax:</td><td>' . get_config('billic_currency_prefix') . $invoice['tax'] . get_config('billic_currency_suffix') . ' (' . $invoice['taxrate'] . '%)</td></tr><tr><td>Total:</td><td>' . get_config('billic_currency_prefix') . $invoice['total'] . get_config('billic_currency_suffix') . '</td></tr><tr><td>User Credit:</td><td>' . get_config('billic_currency_prefix') . $user_row['credit'] . get_config('billic_currency_suffix') . '</td></tr></table>';
+				echo '</table></form><table class="table table-striped" style="width:45%; float:right"><tr><th colspan="2">' . $this->name($invoice) . '</th></tr><tr><td>Subtotal:</td><td>' . get_config('billic_currency_prefix') . $invoice['subtotal'] . get_config('billic_currency_suffix') . '</td></tr><tr><td>Tax:</td><td>' . get_config('billic_currency_prefix') . $invoice['tax'] . get_config('billic_currency_suffix') . ' (' . $invoice['taxrate'] . '%)</td></tr><tr><td>Total:</td><td>' . get_config('billic_currency_prefix') . $invoice['total'] . get_config('billic_currency_suffix') . '</td></tr><tr><td>User Credit:</td><td>' . get_config('billic_currency_prefix') . $user_row['credit'] . get_config('billic_currency_suffix') . '</td></tr></table>';
 				echo '<div style="clear:both"></div>';
 				exit;
 			}
@@ -257,7 +269,7 @@ class Invoices {
 			echo '<tr><td colspan="20">No Invoices matching filter.</td></tr>';
 		}
 		foreach ($invoices as $invoice) {
-			echo '<tr><td><input type="checkbox" name="ids[' . $invoice['id'] . ']" value="1"></td><td><a href="/Admin/Invoices/ID/' . $invoice['id'] . '/">' . $invoice['id'] . '</a></td><td>' . $billic->date_display($invoice['date']) . '</td><td>' . $billic->date_display($invoice['duedate']) . '</td><td>' . get_config('billic_currency_prefix') . $invoice['subtotal'] . get_config('billic_currency_suffix') . '</td><td>' . get_config('billic_currency_prefix') . $invoice['credit'] . get_config('billic_currency_suffix') . '</td><td>' . get_config('billic_currency_prefix') . $invoice['tax'] . get_config('billic_currency_suffix') . '</td><td>' . get_config('billic_currency_prefix') . $invoice['total'] . get_config('billic_currency_suffix') . '</td><td>';
+			echo '<tr><td><input type="checkbox" name="ids[' . $invoice['id'] . ']" value="1"></td><td><a href="/Admin/Invoices/ID/' . $invoice['id'] . '/">' . $this->name_short($invoice) . '</a></td><td>' . $billic->date_display($invoice['date']) . '</td><td>' . $billic->date_display($invoice['duedate']) . '</td><td>' . get_config('billic_currency_prefix') . $invoice['subtotal'] . get_config('billic_currency_suffix') . '</td><td>' . get_config('billic_currency_prefix') . $invoice['credit'] . get_config('billic_currency_suffix') . '</td><td>' . get_config('billic_currency_prefix') . $invoice['tax'] . get_config('billic_currency_suffix') . '</td><td>' . get_config('billic_currency_prefix') . $invoice['total'] . get_config('billic_currency_suffix') . '</td><td>';
 			switch ($invoice['status']) {
 				case 'Paid':
 					$label = 'success';
@@ -314,7 +326,7 @@ class Invoices {
 			}
 			if (array_key_exists('Action', $_GET) && $_GET['Action'] == 'Pay') {
 				$billic->set_title('Pay #' . $invoice['id']);
-				echo '<h1>Pay Invoice #' . $_GET['ID'] . ' - <span style="color: #618ca7">Total: ' . get_config('billic_currency_prefix') . $invoice['total'] . get_config('billic_currency_suffix') . '</span></h1>';
+				echo '<h1>Pay ' . $this->name($invoice) . ' - <span style="color: #618ca7">Total: ' . get_config('billic_currency_prefix') . $invoice['total'] . get_config('billic_currency_suffix') . '</span></h1>';
 				if ($invoice['status'] != 'Unpaid') {
 					err('Unable to pay an invoice with the status "' . $invoice['status'] . '"');
 				}
@@ -429,8 +441,8 @@ class Invoices {
 				}
 				return;
 			}
-			$billic->set_title('Invoice #' . $invoice['id']);
-			echo '<h1>Invoice #' . $invoice['id'] . ' - Due ' . $billic->date_display($invoice['duedate']) . ' (' . $invoice['status'] . ')</h1>';
+			$billic->set_title($this->name($invoice));
+			echo '<h1>' . $this->name($invoice) . ' - Due ' . $billic->date_display($invoice['duedate']) . ' (' . $invoice['status'] . ')</h1>';
 			$editable = false;
 			$this->show($invoice, $billic->user, 'client', $editable);
 			return;
@@ -471,7 +483,7 @@ class Invoices {
 		} else {
 			echo '<table class="table table-striped"><tr><th>Invoice&nbsp;ID</th><th>Due Date</th><th>Total</th><th>Status</th><th>Actions</th></tr>';
 			foreach ($invoices as $invoice) {
-				echo '<tr><td><a href="/User/Invoices/ID/' . $invoice['id'] . '/">#' . $invoice['id'] . '</a></td><td>' . $billic->date_display($invoice['duedate']) . '</td><td>' . get_config('billic_currency_prefix') . $invoice['total'] . get_config('billic_currency_suffix') . '</td><td>';
+				echo '<tr><td><a href="/User/Invoices/ID/' . $invoice['id'] . '/">' . $this->name_short($invoice) . '</a></td><td>' . $billic->date_display($invoice['duedate']) . '</td><td>' . get_config('billic_currency_prefix') . $invoice['total'] . get_config('billic_currency_suffix') . '</td><td>';
 				switch ($invoice['status']) {
 					case 'Paid':
 						$label = 'success';
@@ -533,7 +545,7 @@ class Invoices {
 				}
 			}
 		}
-		echo '<div class="row"><div class="col-sm-4" style="padding: 20px"><b>Invoice #' . $invoice['id'] . '</b><br><div style="padding-left: 10px">Date: ' . $billic->date_display($invoice['date']) . '<br>Due: ' . $billic->date_display($invoice['duedate']) . '<br>Status: ';
+		echo '<div class="row"><div class="col-sm-4" style="padding: 20px"><b>' . $this->name($invoice) . '</b><br><div style="padding-left: 10px">Date: ' . $billic->date_display($invoice['date']) . '<br>Due: ' . $billic->date_display($invoice['duedate']) . '<br>Status: ';
 		switch ($invoice['status']) {
 			case 'Paid':
 				$label = 'success';
@@ -1012,7 +1024,7 @@ class Invoices {
 			$db->insert('logs_credit', array(
 				'clientid' => $user_row['id'],
 				'date' => time() ,
-				'description' => 'Credit Applied to Invoice #' . $invoice['id'],
+				'description' => 'Credit Applied to ' . $this->name($invoice),
 				'amount' => $new_credit_invoice,
 				'invoiceid' => $invoice['id'],
 			));
@@ -1039,7 +1051,7 @@ class Invoices {
 				$db->insert('logs_credit', array(
 					'clientid' => $invoice['userid'],
 					'date' => time() ,
-					'description' => 'Add Funds Invoice #' . $invoice['id'],
+					'description' => 'Add Funds ' . $this->name($invoice),
 					'amount' => $invoiceitem['amount'],
 				));
 				$db->q('UPDATE `users` SET `credit` = (`credit`+?) WHERE `id` = ?', $invoiceitem['amount'], $invoice['userid']);
@@ -1322,7 +1334,7 @@ class Invoices {
 		}
 		
 		// Invoice Number
-		$text = "Invoice #" . $invoice['id'];
+		$text = $this->name($invoice);
 		$pdf->SetFont("Helvetica", "B", 16);
 		$pdf->SetXY(10, $this->currentY);
 		$pdf->Cell($pdf->GetStringWidth($text), 5, $text);
