@@ -21,7 +21,7 @@ class Invoices {
 		$name = "Invoice #{$invoice['id']}";
 		if (empty($invoice['num']))
 			return "Proforma $name";
-		return "Invoice $name";
+		return "$name";
 	}
 	function name_short($invoice) {
 		$name = "#{$invoice['id']}";
@@ -1157,8 +1157,18 @@ class Invoices {
 		}
 		return true;
 	}
+	function get_last_invoice_num() {
+		global $billic, $db;
+		return (int) $db->q('SELECT `num` FROM `invoices` ORDER BY `num` DESC LIMIT 1')[0]['num'];
+	}
 	function cron() {
 		global $billic, $db;
+		// assign invoice numbers to paid invoices
+		foreach($db->q('SELECT `id` FROM `invoices` WHERE `num` is NULL AND `status` = "Paid" ORDER BY `datepaid`, `id`') as $invoice) {
+			$next_num = (get_last_invoice_num()+1);
+			$db->q('UPDATE `invoices` SET `num` = ? WHERE `id` = ?', $next_num, $invoice['id']);
+		}
+		
 		// first day of the month
 		if (date('d') == 1 && get_config('Invoices_SummaryCooldown') < time() - 172800) {
 			set_config('Invoices_SummaryCooldown', time());
@@ -1334,7 +1344,10 @@ class Invoices {
 		}
 		
 		// Invoice Number
-		$text = $this->name($invoice);
+		if (empty($invoice['num']))
+                        $text = 'Proforma Invoice';
+                else
+                        $text = $this->name($invoice);
 		$pdf->SetFont("Helvetica", "B", 16);
 		$pdf->SetXY(10, $this->currentY);
 		$pdf->Cell($pdf->GetStringWidth($text), 5, $text);
