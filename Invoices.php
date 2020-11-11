@@ -1165,7 +1165,7 @@ class Invoices {
 		global $billic, $db;
 		// assign invoice numbers to paid invoices
 		foreach($db->q('SELECT `id` FROM `invoices` WHERE `num` is NULL AND `status` = "Paid" ORDER BY `datepaid`, `id`') as $invoice) {
-			$next_num = (get_last_invoice_num()+1);
+			$next_num = ($this->get_last_invoice_num()+1);
 			$db->q('UPDATE `invoices` SET `num` = ? WHERE `id` = ?', $next_num, $invoice['id']);
 		}
 		
@@ -1284,7 +1284,7 @@ class Invoices {
 			echo '<tr><td colspan="20">User has no invoices</td></tr>';
 		}
 		foreach ($invoices as $invoice) {
-			echo '<tr><td><a href="/Admin/Invoices/ID/' . $invoice['id'] . '/">' . $invoice['id'] . '</a></td><td>' . $billic->date_display($invoice['duedate']) . '</td>' . '<td>' . get_config('billic_currency_prefix') . $invoice['subtotal'] . get_config('billic_currency_suffix') . '</td>' . '<td>' . get_config('billic_currency_prefix') . $invoice['credit'] . get_config('billic_currency_suffix') . '</td>' . '<td>' . get_config('billic_currency_prefix') . $invoice['tax'] . get_config('billic_currency_suffix') . '</td>' . '<td>' . get_config('billic_currency_prefix') . $invoice['total'] . get_config('billic_currency_suffix') . '</td>' . '<td>';
+			echo '<tr><td><a href="/Admin/Invoices/ID/' . $invoice['id'] . '/">' . $this->name_short($invoice) . '</a></td><td>' . $billic->date_display($invoice['duedate']) . '</td>' . '<td>' . get_config('billic_currency_prefix') . $invoice['subtotal'] . get_config('billic_currency_suffix') . '</td>' . '<td>' . get_config('billic_currency_prefix') . $invoice['credit'] . get_config('billic_currency_suffix') . '</td>' . '<td>' . get_config('billic_currency_prefix') . $invoice['tax'] . get_config('billic_currency_suffix') . '</td>' . '<td>' . get_config('billic_currency_prefix') . $invoice['total'] . get_config('billic_currency_suffix') . '</td>' . '<td>';
 			switch ($invoice['status']) {
 				case 'Paid':
 					$label = 'success';
