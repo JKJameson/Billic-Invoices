@@ -18,16 +18,14 @@ class Invoices {
 		'user_menu_icon' => '<i class="icon-tags"></i>',
 	);
 	function name($invoice) {
-		$name = "Invoice #{$invoice['id']}";
 		if (empty($invoice['num']))
-			return "Proforma $name";
-		return "$name";
+			return "Proforma #{$invoice['id']}";
+		return "Invoice #{$invoice['num']}";
 	}
 	function name_short($invoice) {
-		$name = "#{$invoice['id']}";
 		if (empty($invoice['num']))
-			return "Proforma $name";
-		return "$name";
+			return "Proforma #{$invoice['id']}";
+		return "#{$invoice['num']}";
 	}
 	function admin_area() {
 		global $billic, $db;
