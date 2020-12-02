@@ -382,25 +382,31 @@ class Invoices {
 						if (in_array($module['id'], $modules_done)) {
 							continue;
 						}
-						echo '<tr><td>';
+						$line = '<tr><td>';
 						$modules_done[] = $module['id'];
 						$billic->module($module['id']);
 						if (method_exists($billic->modules[$module['id']], 'payment_page')) {
 							$show = false;
+							ob_start();
 							if (method_exists($billic->modules[$module['id']], 'payment_button')) {
 								$show = call_user_func(array(
 									$billic->modules[$module['id']],
 									'payment_button'
 								) , $params);
+								$page = ob_get_contents();
+								ob_end_clean();
+								$page = trim($page);
+								if (!empty($page))
+									$line .= $page;
 							}
 							if ($show === 'verify') {
-								echo $verification_text;
+								$line .= $verification_text;
 							} else
 							if ($show !== false) {
 								if (empty($show)) {
 									$show = 'Pay Now';
 								}
-								echo '<form action="/User/Invoices/ID/' . $invoice['id'] . '/Action/Pay/Module/' . $module['id'] . '/" method="POST"><input type="submit" class="btn btn-default" value="' . $show . '"></form>';
+								$line .= '<form action="/User/Invoices/ID/' . $invoice['id'] . '/Action/Pay/Module/' . $module['id'] . '/" method="POST"><input type="submit" class="btn btn-default" value="' . $show . '"></form>';
 							}
 						} else if (method_exists($billic->modules[$module['id']], 'payment_button')) {
 							ob_start();
@@ -409,30 +415,29 @@ class Invoices {
 								'payment_button'
 							) , $params);
 							if ($ret === 'verify') {
-								echo $verification_text;
+								$line .= $verification_text;
+							} else if ($ret===false) {
+								continue;
 							} else {
-								echo $ret;
+								$line .= $ret;
 								$button = ob_get_contents();
 								ob_end_clean();
 								if ($ret !== false) {
 									$button = trim($button);
-									//echo '<br>'.$module['id'].' - ';
-									//echo var_dump($button);
-									//echo '<br><br>';
-									if (!empty($button)) {
-										echo $button;
-									}
+									if (!empty($button)) 
+										$line .= $button;
 								}
 							}
 						}
-						echo '</td><td>';
+						$line .= '</td><td>';
 						if (method_exists($billic->modules[$module['id']], 'payment_features')) {
-							echo call_user_func(array(
+							$line .= call_user_func(array(
 								$billic->modules[$module['id']],
 								'payment_features'
 							));
 						}
-						echo '</td></tr>';
+						$line .= '</td></tr>';
+						echo $line.PHP_EOL;
 					}
 					echo '</table>';
 					echo '</div>';
