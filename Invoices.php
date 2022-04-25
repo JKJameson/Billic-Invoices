@@ -1229,8 +1229,8 @@ class Invoices {
 		              $cols_txt .= ',Remote Service ID';
 		              echo $cols_txt."\r\n";
 		*/
-		echo "Invoice ID,User ID,Date,Subtotal,Credit,Tax,Total,Tax Rate,Status,Country,VAT Number,Description,Service ID,Remote Service ID\r\n";
-		$invoices = $db->q('SELECT `id`, `userid`, `date`, `subtotal`, `credit`, `tax`, `total`, `taxrate`, `status` FROM `invoices` WHERE `date` >= ? AND `date` <= ? ORDER BY `id` ASC', $date_start, $date_end);
+		echo "Database ID,Sequential ID,User ID,Date,Subtotal,Credit,Tax,Total,Tax Rate,Status,Country,VAT Number,Description,Service ID,Remote Service ID\r\n";
+		$invoices = $db->q('SELECT `id`, `num`, `userid`, `date`, `subtotal`, `credit`, `tax`, `total`, `taxrate`, `status` FROM `invoices` WHERE `date` >= ? AND `date` <= ? ORDER BY `id` ASC', $date_start, $date_end);
 		foreach ($invoices as $invoice) {
 			$invoice['date'] = date('Y-m-d', $invoice['date']);
 			//$invoice['duedate'] = date('Y-m-d', $invoice['duedate']);
