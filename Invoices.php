@@ -1395,8 +1395,10 @@ class Invoices {
 		$pdf->SetFont("Helvetica", "", 12);
 		$amount_title = 'Amount (' . get_config('billic_currency_code') . ')';
 		
+		$user = $db->q('SELECT * FROM `users` WHERE `id` = ?', $invoice['userid'])[0];
+		
 		// Client address
-		$text = 'Invoiced To:' . PHP_EOL . $this->user_address($billic->user);
+		$text = 'Invoiced To:' . PHP_EOL . $this->user_address($user);
 		$r1 = $pdf->w - 70;
 		$r2 = $r1 + 68;
 		$y1 = $this->currentY;
