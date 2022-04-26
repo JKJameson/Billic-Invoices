@@ -362,7 +362,9 @@ class Invoices {
 					'invoice' => $invoice,
 					'charge' => $charge,
 				);
-				$verification_text = 'Requires <a href="/User/AccountVerification/">account verification</a>.';
+				$verification_text = '';
+				if ($billic->module_exists('AccountVerification'))
+					$verification_text = 'Requires <a href="/User/AccountVerification/">account verification</a>.';
 				if (isset($_GET['Module'])) {
 					$_GET['Module'] = $_GET['Module'];
 					$billic->module($_GET['Module']);
@@ -382,7 +384,8 @@ class Invoices {
 						if (in_array($module['id'], $modules_done)) {
 							continue;
 						}
-						$line = '<tr><td>';
+						$line_start = '<tr><td>';
+						$line = $line_start;
 						$modules_done[] = $module['id'];
 						$billic->module($module['id']);
 						if (method_exists($billic->modules[$module['id']], 'payment_page')) {
@@ -429,6 +432,7 @@ class Invoices {
 								}
 							}
 						}
+						if ($line===$line_start) continue;
 						$line .= '</td><td>';
 						if (method_exists($billic->modules[$module['id']], 'payment_features')) {
 							$line .= call_user_func(array(
