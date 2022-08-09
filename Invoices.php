@@ -1124,7 +1124,7 @@ class Invoices {
 						) , $array) === false) {
 							return 'Failed to unsuspend service ID "' . $service['id'] . '"';
 						}
-						$db->q('UPDATE `services` SET `domainstatus` = \'Active\' WHERE `id` = ?', $service['id']);
+						$db->q('UPDATE `services` SET `domainstatus` = \'Active\', `suspendeddate` = 0 WHERE `id` = ?', $service['id']);
 						$template_id = $db->q('SELECT `email_template_unsuspended` FROM `plans` WHERE `id` = ?', $service['packageid']);
 						$template_id = $template_id[0]['email_template_unsuspended'];
 						if (!is_int($template_id)) {
