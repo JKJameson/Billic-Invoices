@@ -72,6 +72,11 @@ class Invoices {
 					);
 				}
 			}
+			if (isset($_POST['recipient']) && $editable && $billic->user_has_permission($billic->user, 'Invoices_Update')) {
+				$db->q('UPDATE `invoices` SET `recipient` = ? WHERE `id` = ?', $_POST['recipient'], $invoice['id']);
+				$invoice['recipient'] = $_POST['recipient'];
+				$billic->status = 'updated';
+			}
 			if (isset($_POST['update']) && $editable && $billic->user_has_permission($billic->user, 'Invoices_Update')) {
 				$db->q('UPDATE `invoices` SET `taxrate` = ? WHERE `id` = ?', $_POST['taxrate'], $invoice['id']);
 				$invoice['taxrate'] = $_POST['taxrate'];
@@ -568,11 +573,22 @@ class Invoices {
 		echo '<span class="label label-' . $label . '">' . $invoice['status'] . '</span>';
 		echo '</div></div><div class="col-sm-4" style="padding: 20px"><b>Invoiced to:</b><br><div style="padding-left: 10px">';
 		if ($area == 'admin' && $editable && $billic->user_has_permission($billic->user, 'Invoices_Update')) {
-			echo '<textarea name="recipient">';
-		}
-		echo $this->user_address($user_row, false);
-		if ($area == 'admin' && $editable && $billic->user_has_permission($billic->user, 'Invoices_Update')) {
+			echo '<form method="POST">';
+			echo '<textarea name="recipient" class="form-control" style="min-height: 160px">';
+			if (empty($invoice['recipient'])) {
+				echo trim($this->user_address($user_row, false));
+			} else {
+				echo trim(safe($invoice['recipient']));
+			}
 			echo '</textarea>';
+			echo '<div align="center"><input type="submit" class="btn btn-success btn-xs" value="Update Address"></div>';
+			echo '</form>';
+		} else {
+		if (empty($invoice['recipient'])) {
+				echo $this->user_address($user_row, true);
+			} else {
+				echo nl2br(safe($invoice['recipient']));
+			}
 		}
 		echo '</div></div><div class="col-sm-4" style="padding: 20px"><b>To pay ' . get_config('billic_companyname') . ':</b><br><div style="padding-left: 10px">' . nl2br(get_config('billic_companyaddress'));
 		echo '</div></div></div><br>';
