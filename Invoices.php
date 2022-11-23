@@ -567,7 +567,13 @@ class Invoices {
 		}
 		echo '<span class="label label-' . $label . '">' . $invoice['status'] . '</span>';
 		echo '</div></div><div class="col-sm-4" style="padding: 20px"><b>Invoiced to:</b><br><div style="padding-left: 10px">';
-		echo $this->user_address($user_row, true);
+		if ($area == 'admin' && $editable && $billic->user_has_permission($billic->user, 'Invoices_Update')) {
+			echo '<textarea name="recipient">';
+		}
+		echo $this->user_address($user_row, false);
+		if ($area == 'admin' && $editable && $billic->user_has_permission($billic->user, 'Invoices_Update')) {
+			echo '</textarea>';
+		}
 		echo '</div></div><div class="col-sm-4" style="padding: 20px"><b>To pay ' . get_config('billic_companyname') . ':</b><br><div style="padding-left: 10px">' . nl2br(get_config('billic_companyaddress'));
 		echo '</div></div></div><br>';
 		if ($area == 'client') {
