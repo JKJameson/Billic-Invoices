@@ -1121,7 +1121,17 @@ class Invoices {
 				$billingcycle = $db->q('SELECT * FROM `billingcycles` WHERE `name` = ?', $service['billingcycle']);
 			}
 			$billingcycle = $billingcycle[0];
-			$newtime = ($oldtime + $billingcycle['seconds']);
+
+			// Convert a base of 2592000 (1 Month) to align as a month increment instead of 30 days worth of time.
+			// In other words, make sure that the day of the month is the same and does not drift over time.
+			$daySeconds = 2592000;
+			$rem = $date % $daySeconds;
+			if ($rem===0) {
+				$newtime = strtotime('+'.floor($date / $daySeconds).' months', $oldtime);
+			} else {			
+				$newtime = ($oldtime + $billingcycle['seconds']);
+			}
+			
 			if ($newtime <= $oldtime) {
 				return 'The billingcycle seems to have an invalid time multiplier for service ID "' . $service['id'] . '"';
 			}
