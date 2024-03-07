@@ -29,6 +29,9 @@ class Invoices {
 	}
 	function admin_area() {
 		global $billic, $db;
+		if (isset($_GET['Number'])) {
+			$_GET['ID'] = @$db->q('SELECT `id` FROM `invoices` WHERE `num` = ?', $_GET['Number'])[0]['id'];
+		}
 		if (isset($_GET['ID'])) {
 			$invoice = $db->q('SELECT * FROM `invoices` WHERE `id` = ?', $_GET['ID']);
 			$invoice = $invoice[0];
@@ -255,7 +258,7 @@ class Invoices {
 			for (var i = 0; i < input.length; i++) {
 				if (input[i].type == \'checkbox\' && input[i].name.split(\'[\')[0] === name) {
 					input[i].checked = bx.checked;
-				}                
+				}
 			}
 		}
 		</script>';
@@ -315,6 +318,9 @@ class Invoices {
 	function user_area() {
 		global $billic, $db;
 		$billic->force_login();
+		if (isset($_GET['Number'])) {
+			$_GET['ID'] = @$db->q('SELECT `id` FROM `invoices` WHERE `num` = ?', $_GET['Number'])[0]['id'];
+		}
 		if (isset($_GET['ID'])) {
 			$invoice = $db->q('SELECT * FROM `invoices` WHERE `id` = ? AND `userid` = ?', $_GET['ID'], $billic->user['id']);
 			$invoice = $invoice[0];
@@ -372,6 +378,7 @@ class Invoices {
 					$verification_text = 'Requires <a href="/User/AccountVerification/">account verification</a>.';
 				if (isset($_GET['Module'])) {
 					$_GET['Module'] = $_GET['Module'];
+					$billic->enter_module($_GET['Module']);
 					$billic->module($_GET['Module']);
 					if (method_exists($billic->modules[$_GET['Module']], 'payment_page')) {
 						echo call_user_func(array(
@@ -379,6 +386,7 @@ class Invoices {
 							'payment_page'
 						) , $params);
 					}
+					$billic->exit_module();
 				} else {
 					echo '<div class="table-responsive">';
 					echo '<table class="table table-striped table-hover">';
@@ -392,15 +400,19 @@ class Invoices {
 						$line_start = '<tr><td>';
 						$line = $line_start;
 						$modules_done[] = $module['id'];
+						$billic->enter_module($module['id']);
 						$billic->module($module['id']);
+						$billic->exit_module();
 						if (method_exists($billic->modules[$module['id']], 'payment_page')) {
 							$show = false;
 							ob_start();
 							if (method_exists($billic->modules[$module['id']], 'payment_button')) {
+								$billic->enter_module($module['id']);
 								$show = call_user_func(array(
 									$billic->modules[$module['id']],
 									'payment_button'
 								) , $params);
+								$billic->exit_module();
 								$page = ob_get_contents();
 								ob_end_clean();
 								$page = trim($page);
@@ -418,10 +430,12 @@ class Invoices {
 							}
 						} else if (method_exists($billic->modules[$module['id']], 'payment_button')) {
 							ob_start();
+							$billic->enter_module($module['id']);
 							$ret = call_user_func(array(
 								$billic->modules[$module['id']],
 								'payment_button'
 							) , $params);
+							$billic->exit_module();
 							if ($ret === 'verify') {
 								$line .= $verification_text;
 							} else if ($ret===false) {
@@ -432,7 +446,7 @@ class Invoices {
 								ob_end_clean();
 								if ($ret !== false) {
 									$button = trim($button);
-									if (!empty($button)) 
+									if (!empty($button))
 										$line .= $button;
 								}
 							}
@@ -440,10 +454,12 @@ class Invoices {
 						if ($line===$line_start) continue;
 						$line .= '</td><td>';
 						if (method_exists($billic->modules[$module['id']], 'payment_features')) {
+							$billic->enter_module($module['id']);
 							$line .= call_user_func(array(
 								$billic->modules[$module['id']],
 								'payment_features'
 							));
+							$billic->exit_module();
 						}
 						$line .= '</td></tr>';
 						echo $line.PHP_EOL;
@@ -543,7 +559,7 @@ class Invoices {
 	function show($invoice, $user_row, $area, $editable) { // $area = admin OR client
 		global $billic, $db;
 		if ($invoice['status'] == 'Unpaid') {
-			if ($_GET['Status'] == 'Completed') {
+			if (isset($_GET['Status']) && $_GET['Status'] == 'Completed') {
 				$sessKey = 'invoice_'.$invoice['id'].'_complete';
 				if (empty($_SESSION[$sessKey]))
 					$_SESSION[$sessKey] = time();
@@ -938,10 +954,12 @@ class Invoices {
 			foreach ($modules as $module) {
 				$billic->module($module['id']);
 				if (method_exists($billic->modules[$module['id']], 'payment_charge')) {
+					$billic->enter_module($module['id']);
 					$payment_charge = call_user_func(array(
 						$billic->modules[$module['id']],
 						'payment_charge'
 					) , $params_payment_charge);
+					$billic->exit_module();
 					if ($payment_charge != 'PASS' && $payment_charge !== true) {
 						err('Failed to charge using module ' . $module['id'] . ': ' . $payment_charge);
 					}
@@ -1121,17 +1139,17 @@ class Invoices {
 				$billingcycle = $db->q('SELECT * FROM `billingcycles` WHERE `name` = ?', $service['billingcycle']);
 			}
 			$billingcycle = $billingcycle[0];
-
+			
 			// Convert a base of 2592000 (1 Month) to align as a month increment instead of 30 days worth of time.
 			// In other words, make sure that the day of the month is the same and does not drift over time.
 			$daySeconds = 2592000;
-			$rem = $date % $daySeconds;
+			$rem = (int)$billingcycle['seconds'] % $daySeconds;
 			if ($rem===0) {
-				$newtime = strtotime('+'.floor($date / $daySeconds).' months', $oldtime);
+				$newtime = strtotime('+'.floor((int)$billingcycle['seconds'] / $daySeconds).' months', $oldtime);
 			} else {			
 				$newtime = ($oldtime + $billingcycle['seconds']);
 			}
-			
+
 			if ($newtime <= $oldtime) {
 				return 'The billingcycle seems to have an invalid time multiplier for service ID "' . $service['id'] . '"';
 			}
@@ -1377,7 +1395,7 @@ class Invoices {
 				$pdf->Image($logo);
 				$this->currentY += ($hImg/$pdf->k);
 				$this->watermarkRotate = 0;
-				$this->watermarkPosX = 10 + ($wImg/$pdf->k) + ($pdf->w / 2);
+				$this->watermarkPosX = 10 + ($wImg/$pdf->k) + ($pdf->GetPageWidth() / 2);
 				$this->watermarkPosY = 10 + ($hImg/$pdf->k/2);
 			}
 		}
@@ -1435,7 +1453,7 @@ class Invoices {
 		
 		// Client address
 		$text = 'Invoiced To:' . PHP_EOL . $this->user_address($user);
-		$r1 = $pdf->w - 70;
+		$r1 = $pdf->GetPageWidth() - 70;
 		$r2 = $r1 + 68;
 		$y1 = $this->currentY;
 		$pdf->SetXY($r1, $y1);
@@ -1496,7 +1514,7 @@ class Invoices {
 			$y+= $size + 2;
 			// Draw line
 			$r1 = 10;
-			$r2 = $pdf->w - ($r1 * 2);
+			$r2 = $pdf->GetPageWidth() - ($r1 * 2);
 			$pdf->SetDrawColor(200);
 			$pdf->Line($r1, $y, $r1 + $r2, $y);
 			$pdf->SetDrawColor(0);
@@ -1512,7 +1530,7 @@ class Invoices {
 			$y+= $size + 2;
 			// Draw line
 			$r1 = 10;
-			$r2 = $pdf->w - ($r1 * 2);
+			$r2 = $pdf->GetPageWidth() - ($r1 * 2);
 			$pdf->SetDrawColor(200);
 			$pdf->Line($r1, $y, $r1 + $r2, $y);
 			$pdf->SetDrawColor(0);
@@ -1527,7 +1545,7 @@ class Invoices {
 				$y+= $size + 2;
 				// Draw line
 				$r1 = 10;
-				$r2 = $pdf->w - ($r1 * 2);
+				$r2 = $pdf->GetPageWidth() - ($r1 * 2);
 				$pdf->SetDrawColor(200);
 				$pdf->Line($r1, $y, $r1 + $r2, $y);
 				$pdf->SetDrawColor(0);
@@ -1599,15 +1617,15 @@ if (!class_exists('Invoices_PDF_Invoice')) {
 		function addCols($tab, &$currentY) {
 			global $colonnes;
 			$r1 = 10;
-			$r2 = $this->w - ($r1 * 2);
+			$r2 = $this->GetPageWidth() - ($r1 * 2);
 			$y1 = $currentY;
-			$y2 = $this->h - 10 - $y1;
+			$y2 = $this->GetPageHeight() - 10 - $y1;
 			$this->SetXY($r1, $y1);
 			$this->Rect($r1, $y1, $r2, $y2, "D");
 			$this->Line($r1, $y1 + 6, $r1 + $r2, $y1 + 6);
 			$colX = $r1;
 			$colonnes = $tab;
-			while (list($lib, $pos) = each($tab)) {
+			foreach($tab as $lib => $pos) {
 				$this->SetXY($colX, $y1 + 3);
 				$this->Cell($pos, 1, $lib, 0, 0, "C");
 				$colX+= $pos;
@@ -1616,7 +1634,7 @@ if (!class_exists('Invoices_PDF_Invoice')) {
 		}
 		function addLineFormat($tab) {
 			global $format, $colonnes;
-			while (list($lib, $pos) = each($colonnes)) {
+			foreach($colonnes as $lib => $pos) {
 				if (isset($tab["$lib"])) $format[$lib] = $tab["$lib"];
 			}
 		}
@@ -1624,7 +1642,7 @@ if (!class_exists('Invoices_PDF_Invoice')) {
 			global $colonnes;
 			reset($colonnes);
 			$maxSize = 0;
-			while (list($lib, $pos) = each($colonnes)) {
+			foreach($colonnes as $lib => $pos) {
 				$texte = $tab[$lib];
 				$longCell = $pos - 2;
 				$size = $this->sizeOfText($texte, $longCell);
@@ -1637,7 +1655,7 @@ if (!class_exists('Invoices_PDF_Invoice')) {
 			$ordonnee = 10;
 			$maxSize = $ligne;
 			reset($colonnes);
-			while (list($lib, $pos) = each($colonnes)) {
+			foreach($colonnes as $lib => $pos) {
 				$longCell = $pos - 2;
 				$texte = $tab[$lib];
 				$length = $this->GetStringWidth($texte);
